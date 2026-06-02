@@ -17,6 +17,14 @@ from .serializers import (
     TaskSerializer,
 )
 
+# RAG 导入
+try:
+    from .rag import get_rag_service
+    RAG_AVAILABLE = True
+except Exception as e:
+    print(f"RAG 模块未加载: {e}")
+    RAG_AVAILABLE = False
+
 User = get_user_model()
 
 
@@ -340,6 +348,14 @@ def tasks_list_create(request: HttpRequest) -> Response:
                     if tag:
                         task.tags.add(tag)
             
+            # 同步到 RAG 知识库
+            try:
+                if RAG_AVAILABLE:
+                    rag_service = get_rag_service(user.id)
+                    rag_service.sync_task(task)
+            except Exception:
+                pass  # 静默失败，不影响主功能
+            
             result_task = serialize_task_with_relations(task)
             return Response(result_task, status=status.HTTP_201_CREATED)
         except Exception as e:
@@ -550,3 +566,128 @@ def import_data(request: HttpRequest, format: str) -> Response:
     
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========================================
+# RAG API Views
+# ========================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rag_recommendations(request: HttpRequest) -> Response:
+    """获取任务推荐"""
+    if not RAG_AVAILABLE:
+        return Response({
+            'similar_tasks': [],
+            'recommendations': {'suggestions': ['RAG 功能暂不可用']}
+        })
+    
+    try:
+        rag_service = get_rag_service(request.user.id)
+        
+        task_data = {
+            'title': request.data.get('title', ''),
+            'description': request.data.get('description', ''),
+            'priority': request.data.get('priority', 'MEDIUM')
+        }
+        
+        result = rag_service.get_task_recommendations(task_data, use_llm=False)
+        return Response(result)
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rag_query(request: HttpRequest) -> Response:
+    """自然语言查询"""
+    if not RAG_AVAILABLE:
+        return Response({
+            'answer': 'RAG 功能暂不可用',
+            'related_tasks': []
+        })
+    
+    try:
+        rag_service = get_rag_service(request.user.id)
+        query = request.data.get('query', '')
+        
+        result = rag_service.query_tasks(query, use_llm=False)
+        return Response(result)
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rag_chat(request: HttpRequest) -> Response:
+    """AI 助手对话"""
+    if not RAG_AVAILABLE:
+        return Response({
+            'answer': 'RAG 功能暂不可用',
+            'context_used': 0
+        })
+    
+    try:
+        rag_service = get_rag_service(request.user.id)
+        message = request.data.get('message', '')
+        
+        result = rag_service.chat(message, use_llm=False)
+        return Response(result)
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rag_sync(request: HttpRequest) -> Response:
+    """同步用户的任务到知识库"""
+    if not RAG_AVAILABLE:
+        return Response({'message': 'RAG 功能暂不可用'})
+    
+    try:
+        rag_service = get_rag_service(request.user.id)
+        tasks = Task.objects.filter(user=request.user)
+        
+        count = 0
+        for task in tasks:
+            if rag_service.sync_task(task):
+                count += 1
+        
+        status = rag_service.get_kb_status()
+        
+        return Response({
+            'message': f'Synced {count} tasks',
+            'status': status
+        })
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def rag_status(request: HttpRequest) -> Response:
+    """获取 RAG 知识库状态"""
+    if not RAG_AVAILABLE:
+        return Response({
+            'has_kb': False,
+            'task_count': 0,
+            'rag_available': False
+        })
+    
+    try:
+        rag_service = get_rag_service(request.user.id)
+        status = rag_service.get_kb_status()
+        status['rag_available'] = True
+        return Response(status)
+    
+    except Exception as e:
+        return Response({
+            'has_kb': False,
+            'task_count': 0,
+            'rag_available': False,
+            'error': str(e)
+        })

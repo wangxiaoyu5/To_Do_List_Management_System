@@ -50,3 +50,48 @@ export interface TaskFormData {
   categoryId?: string;
   tagIds: string[];
 }
+
+// RAG 相关类型
+export interface RAGRecommendationsRequest {
+  title: string;
+  description?: string;
+  priority: Priority;
+}
+
+export interface RAGRecommendationsResponse {
+  similar_tasks: any[];
+  recommendations: {
+    suggestions: string[];
+    similar_tasks_used?: number;
+  };
+  has_kb?: boolean;
+}
+
+export interface RAGQueryRequest {
+  query: string;
+}
+
+export interface RAGQueryResponse {
+  answer: string;
+  related_tasks: any[];
+  has_kb?: boolean;
+}
+
+export interface RAGChatRequest {
+  message: string;
+}
+
+export interface RAGChatResponse {
+  answer: string;
+  context_used: number;
+  has_kb?: boolean;
+}
+
+export interface RAGStatusResponse {
+  has_kb: boolean;
+  task_count: number;
+  rag_available: boolean;
+  collection_name?: string;
+  use_openai?: boolean;
+  error?: string;
+}

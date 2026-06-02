@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Modal,
   Form,
@@ -7,15 +7,19 @@ import {
   DatePicker,
   Button,
   message,
+  Card,
+  Typography,
+  Badge,
 } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../../store';
 import { addTask, updateTask } from '../../store';
-import { tasksApi } from '../../services/api';
+import { tasksApi, ragApi } from '../../services/api';
 import type { Task, TaskFormData } from '../../types';
 
 const { TextArea } = Input;
 const { Option } = Select;
+const { Text, Paragraph } = Typography;
 
 interface TaskFormProps {
   open: boolean;
@@ -27,9 +31,14 @@ const TaskForm: React.FC<TaskFormProps> = ({ open, task, onClose }) => {
   const [form] = Form.useForm();
   const { categories, tags } = useSelector((state: RootState) => state.data);
   const dispatch = useDispatch<AppDispatch>();
+  const [recommendations, setRecommendations] = useState<string[]>([]);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [showRecommendations, setShowRecommendations] = useState(false);
 
   useEffect(() => {
     if (open) {
+      setRecommendations([]);
+      setShowRecommendations(false);
       if (task) {
         form.setFieldsValue({
           title: task.title,
@@ -44,6 +53,33 @@ const TaskForm: React.FC<TaskFormProps> = ({ open, task, onClose }) => {
       }
     }
   }, [open, task, form]);
+
+  const fetchRecommendations = useCallback(async () => {
+    const values = form.getFieldsValue();
+    if (!values.title?.trim()) return;
+
+    setIsLoadingRecommendations(true);
+    setShowRecommendations(true);
+    try {
+      const response = await ragApi.getRecommendations({
+        title: values.title,
+        description: values.description || '',
+        priority: values.priority || 'MEDIUM',
+      });
+      setRecommendations(response.data.recommendations.suggestions);
+    } catch (error) {
+      console.error('Failed to get recommendations:', error);
+    } finally {
+      setIsLoadingRecommendations(false);
+    }
+  }, [form]);
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 简单的防抖逻辑
+    if (e.target.value.length > 3) {
+      fetchRecommendations();
+    }
+  };
 
   const handleSubmit = async (values: any) => {
     try {
@@ -77,7 +113,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ open, task, onClose }) => {
       open={open}
       onCancel={onClose}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
       centered
       styles={{
         header: {
@@ -97,8 +133,40 @@ const TaskForm: React.FC<TaskFormProps> = ({ open, task, onClose }) => {
           label="标题"
           rules={[{ required: true, message: '请输入标题' }]}
         >
-          <Input placeholder="请输入任务标题" size="large" />
+          <Input 
+            placeholder="请输入任务标题" 
+            size="large" 
+            onChange={handleTitleChange}
+          />
         </Form.Item>
+
+        {showRecommendations && (
+          <div style={{ marginBottom: 16 }}>
+            <Card 
+              size="small" 
+              title={
+                <span>
+                  <Badge status="processing" text="AI 建议" />
+                </span>
+              }
+              style={{ background: '#f6ffed', borderColor: '#b7eb8f' }}
+            >
+              {isLoadingRecommendations ? (
+                <Paragraph type="secondary">正在思考中...</Paragraph>
+              ) : recommendations.length > 0 ? (
+                <ul style={{ margin: 0, paddingLeft: 16 }}>
+                  {recommendations.map((suggestion, index) => (
+                    <li key={index} style={{ marginBottom: 8 }}>
+                      <Text type="success">{suggestion}</Text>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <Paragraph type="secondary">暂无建议</Paragraph>
+              )}
+            </Card>
+          </div>
+        )}
 
         <Form.Item
           name="description"

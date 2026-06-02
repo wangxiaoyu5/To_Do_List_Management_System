@@ -1,5 +1,19 @@
 import axios from 'axios';
-import type { User, AuthResponse, Category, Tag, Task, TaskFormData } from '../types';
+import type { 
+  User, 
+  AuthResponse, 
+  Category, 
+  Tag, 
+  Task, 
+  TaskFormData,
+  RAGRecommendationsRequest,
+  RAGRecommendationsResponse,
+  RAGQueryRequest,
+  RAGQueryResponse,
+  RAGChatRequest,
+  RAGChatResponse,
+  RAGStatusResponse
+} from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -84,6 +98,17 @@ export const exportApi = {
   exportJSON: () => api.get('/export/json/', { responseType: 'blob' }),
   exportCSV: () => api.get('/export/csv/', { responseType: 'blob' }),
   importJSON: (data: any) => api.post('/import/json/', data),
+};
+
+export const ragApi = {
+  getRecommendations: (data: RAGRecommendationsRequest) =>
+    api.post<RAGRecommendationsResponse>('/rag/recommendations/', data),
+  query: (data: RAGQueryRequest) =>
+    api.post<RAGQueryResponse>('/rag/query/', data),
+  chat: (data: RAGChatRequest) =>
+    api.post<RAGChatResponse>('/rag/chat/', data),
+  sync: () => api.post('/rag/sync/'),
+  getStatus: () => api.get<RAGStatusResponse>('/rag/status/'),
 };
 
 export default api;

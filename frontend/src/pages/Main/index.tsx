@@ -9,6 +9,7 @@ import {
   UnorderedListOutlined,
   FolderOutlined,
   TagsOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import type { RootState, AppDispatch } from '../../store';
 import { logout, fetchCategories, fetchTags } from '../../store';
@@ -17,6 +18,7 @@ import TaskList from '../../components/TaskList';
 import TaskForm from '../../components/TaskForm';
 import CategoryManager from '../../components/CategoryManager';
 import TagManager from '../../components/TagManager';
+import { AIAssistant } from '../../components/AIAssistant';
 
 const { Header, Sider, Content } = Layout;
 
@@ -87,6 +89,7 @@ const MainPage: React.FC = () => {
     { key: 'tasks', label: '任务列表', icon: <UnorderedListOutlined /> },
     { key: 'categories', label: '分类管理', icon: <FolderOutlined /> },
     { key: 'tags', label: '标签管理', icon: <TagsOutlined /> },
+    { key: 'ai-assistant', label: 'AI 助手', icon: <RobotOutlined /> },
   ];
 
   const userMenuItems = [
@@ -248,6 +251,7 @@ const MainPage: React.FC = () => {
             )}
             {activeTab === 'categories' && <CategoryManager />}
             {activeTab === 'tags' && <TagManager />}
+            {activeTab === 'ai-assistant' && <AIAssistant />}
           </Content>
         </Layout>
 

@@ -1,0 +1,5 @@
+# 最简单的 RAG 依赖
+# 先装这两个试试
+langchain==0.1.10
+openai==1.12.0
+python-dotenv==1.0.0

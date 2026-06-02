@@ -21,4 +21,11 @@ urlpatterns = [
     
     path('export/<str:format>/', views.export_data, name='export-data'),
     path('import/<str:format>/', views.import_data, name='import-data'),
+    
+    # RAG API
+    path('rag/recommendations/', views.rag_recommendations, name='rag-recommendations'),
+    path('rag/query/', views.rag_query, name='rag-query'),
+    path('rag/chat/', views.rag_chat, name='rag-chat'),
+    path('rag/sync/', views.rag_sync, name='rag-sync'),
+    path('rag/status/', views.rag_status, name='rag-status'),
 ]
